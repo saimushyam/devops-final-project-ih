@@ -1,0 +1,66 @@
+name: Expensy Production Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag successfully deployed to staging'
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_LOGIN_SERVER: acrexpensyb8f069a9.azurecr.io
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login using OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Install kubelogin
+        uses: azure/use-kubelogin@v1
+        with:
+          kubelogin-version: 'v0.2.22'
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group rg-expensy-devops \
+            --name aks-expensy \
+            --overwrite-existing
+          kubelogin convert-kubeconfig -l azurecli
+
+      - name: Deploy production
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          kubectl set image deployment/expensy-backend \
+            backend="$ACR_LOGIN_SERVER/expensy-backend:$IMAGE_TAG" \
+            -n production
+
+          kubectl set image deployment/expensy-frontend \
+            frontend="$ACR_LOGIN_SERVER/expensy-frontend:$IMAGE_TAG" \
+            -n production
+
+          kubectl rollout status deployment/expensy-backend \
+            -n production --timeout=180s
+
+          kubectl rollout status deployment/expensy-frontend \
+            -n production --timeout=180s
