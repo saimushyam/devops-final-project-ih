@@ -1,0 +1,55 @@
+services:
+  mongodb:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "-u", "root", "-p", "example", "--authenticationDatabase", "admin", "--eval", "db.adminCommand({ping:1}).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    command: ["redis-server", "--requirepass", "someredispassword"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "someredispassword", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./expensy_backend
+    environment:
+      NODE_ENV: production
+      PORT: "8706"
+      DATABASE_URI: mongodb://root:example@mongodb:27017/expensy?authSource=admin
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: someredispassword
+    ports:
+      - "127.0.0.1:8706:8706"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./expensy_frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8706
+    environment:
+      NODE_ENV: production
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:

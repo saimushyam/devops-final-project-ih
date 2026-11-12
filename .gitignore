@@ -1,0 +1,40 @@
+
+# Environment variables and secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Build output
+node_modules/
+.next/
+dist/
+
+# Terraform local state and credentials
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+*.tfplan
+
+# Terraform local state and saved plans
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfplan
+**/.terraform.tfstate.lock.info
+**/crash.log
+
+# Local credentials
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+**/*.tfvars
+!**/*.tfvars.example
+
+# Kubernetes secrets
+**/*secret-values*.yaml
