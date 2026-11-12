@@ -65,22 +65,28 @@ export default function Component() {
   }
 
   const handleAddExpense = async () => {
-    if (newExpense.name && newExpense.amount && newExpense.category) {
-      setExpenses([
-        ...expenses,
-        {
-          id: expenses.length + 1,
-          name: newExpense.name,
-          amount: parseFloat(newExpense.amount),
-          category: newExpense.category,
-        },
-      ])
-       await addExpensesAPI(newExpense.name, parseFloat(newExpense.amount), newExpense.category)
+    if (!newExpense.name || !newExpense.amount || !newExpense.category) {
+      return
+    }
+
+    try {
+      await addExpensesAPI(
+        newExpense.name,
+        parseFloat(newExpense.amount),
+        newExpense.category
+      )
+
+      const response = await fetchExpensesAPI()
+      setExpenses(response.data)
+
       setNewExpense({
         name: "",
         amount: "",
         category: "",
       })
+    } catch (error) {
+      console.error("Failed to save expense:", error)
+      alert("Expense could not be saved. Please check the API connection.")
     }
   }
 
