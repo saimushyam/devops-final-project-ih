@@ -48,10 +48,10 @@ jobs:
             ./expensy_frontend
           docker push "$ACR_LOGIN_SERVER/expensy-frontend:${GITHUB_SHA}"
 
-      - name: Install kubectl and kubelogin
+      - name: Install kubectl
         uses: azure/setup-kubectl@v4
 
-            - name: Install kubelogin
+      - name: Install kubelogin
         uses: azure/use-kubelogin@v1
         with:
           kubelogin-version: 'v0.2.22'
