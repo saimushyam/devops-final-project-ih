@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: expensy-ingress
+  namespace: production
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: expensy.48.207.129.151.sslip.io
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: expensy-backend
+                port:
+                  number: 8706
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: expensy-frontend
+                port:
+                  number: 3000
