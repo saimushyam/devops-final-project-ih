@@ -51,8 +51,10 @@ jobs:
       - name: Install kubectl and kubelogin
         uses: azure/setup-kubectl@v4
 
-      - name: Install kubelogin
+            - name: Install kubelogin
         uses: azure/use-kubelogin@v1
+        with:
+          kubelogin-version: 'v0.2.22'
 
       - name: Get AKS credentials
         run: |
