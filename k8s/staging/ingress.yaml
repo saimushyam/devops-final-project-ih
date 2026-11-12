@@ -3,8 +3,14 @@ kind: Ingress
 metadata:
   name: expensy-ingress
   namespace: staging
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: traefik
+  tls:
+    - hosts:
+        - staging.48.207.129.151.sslip.io
+      secretName: expensy-tls
   rules:
     - host: staging.48.207.129.151.sslip.io
       http:
