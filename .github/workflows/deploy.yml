@@ -1,0 +1,79 @@
+name: Expensy CI/CD
+
+on:
+  push:
+    branches:
+      - devops-implementation
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_NAME: acrexpensyb8f069a9
+  ACR_LOGIN_SERVER: acrexpensyb8f069a9.azurecr.io
+  AKS_RESOURCE_GROUP: rg-expensy-devops
+  AKS_CLUSTER: aks-expensy
+
+jobs:
+  build-and-deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login using OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to ACR
+        run: az acr login --name "$ACR_NAME"
+
+      - name: Build and push backend
+        run: |
+          docker build -t "$ACR_LOGIN_SERVER/expensy-backend:${GITHUB_SHA}" ./expensy_backend
+          docker push "$ACR_LOGIN_SERVER/expensy-backend:${GITHUB_SHA}"
+
+      - name: Build and push frontend
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_API_URL=/api \
+            -t "$ACR_LOGIN_SERVER/expensy-frontend:${GITHUB_SHA}" \
+            ./expensy_frontend
+          docker push "$ACR_LOGIN_SERVER/expensy-frontend:${GITHUB_SHA}"
+
+      - name: Install kubectl and kubelogin
+        uses: azure/setup-kubectl@v4
+
+      - name: Install kubelogin
+        uses: azure/use-kubelogin@v1
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group "$AKS_RESOURCE_GROUP" \
+            --name "$AKS_CLUSTER" \
+            --overwrite-existing
+          kubelogin convert-kubeconfig -l azurecli
+
+      - name: Deploy staging
+        run: |
+          kubectl apply -f k8s/staging/configmap.yaml
+          kubectl apply -f k8s/staging/backend.yaml
+          kubectl apply -f k8s/staging/frontend.yaml
+          kubectl set image deployment/expensy-backend \
+            backend="$ACR_LOGIN_SERVER/expensy-backend:${GITHUB_SHA}" \
+            -n staging
+          kubectl set image deployment/expensy-frontend \
+            frontend="$ACR_LOGIN_SERVER/expensy-frontend:${GITHUB_SHA}" \
+            -n staging
+          kubectl rollout status deployment/expensy-backend \
+            -n staging --timeout=180s
+          kubectl rollout status deployment/expensy-frontend \
+            -n staging --timeout=180s
