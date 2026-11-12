@@ -1,0 +1,39 @@
+---
+- name: Verify Expensy deployments on AKS
+  hosts: local
+  gather_facts: false
+
+  vars:
+    namespaces:
+      - staging
+      - production
+
+  tasks:
+    - name: Verify Kubernetes connection
+      ansible.builtin.command: kubectl cluster-info
+      changed_when: false
+
+    - name: Check backend rollout
+      ansible.builtin.command: >
+        kubectl rollout status deployment/expensy-backend
+        -n {{ item }} --timeout=120s
+      loop: "{{ namespaces }}"
+      changed_when: false
+
+    - name: Check frontend rollout
+      ansible.builtin.command: >
+        kubectl rollout status deployment/expensy-frontend
+        -n {{ item }} --timeout=120s
+      loop: "{{ namespaces }}"
+      changed_when: false
+
+    - name: Check application pods
+      ansible.builtin.command: kubectl get pods -n {{ item }}
+      loop: "{{ namespaces }}"
+      register: pod_status
+      changed_when: false
+
+    - name: Display pod status
+      ansible.builtin.debug:
+        msg: "{{ item.stdout }}"
+      loop: "{{ pod_status.results }}"
